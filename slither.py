@@ -126,3 +126,8 @@ async def analyze_contract(contract: ContractInput):
         # hapus tmp file
         if os.path.exists(tmp_file_path):
             os.remove(tmp_file_path)
+
+# 5. Run lahhh
+# uvicorn main:app --reload
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

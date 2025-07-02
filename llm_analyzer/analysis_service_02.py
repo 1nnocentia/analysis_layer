@@ -81,3 +81,32 @@ async def generate_report(analysis_input: AnalysisInput):
 
     prompt = create_llm_prompt(analysis_input.issues)
     
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "response_mime_type": "application/json",
+            "temperature": 0.2,
+        }
+    }
+
+    try:
+        response = requests.post(api_url, json=payload)
+        response.raise_for_status() 
+
+        response_json = response.json()
+
+        report_text = respnse_json['candidates'][0]['content']['parts'][0]['text']
+        
+        report_data = json.loads(report_text)
+
+        return LLMReportResponse(**report_data)
+    
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=503, detail=f"Failed to call LLM API: {str(e)}")
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse LLM response: {str(e)}. Response: {response.text}")
+    
+# 5. run run
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)

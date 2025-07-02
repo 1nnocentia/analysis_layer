@@ -73,3 +73,11 @@ async def generate_report(analysis_input: AnalysisInput):
     """
     Terima input, kirim ke LLM, hasil: laporan analisis
     """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment variables")
+    
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+
+    prompt = create_llm_prompt(analysis_input.issues)
+    

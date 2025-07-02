@@ -21,6 +21,9 @@ class Issue(BaseModel):
     message: str
 
 class AnalysisInput(BaseModel):
+    issues: List[Issue]
+
+class LLMReportResponse(BaseModel):
     risk_summary: str = Field(..., description="Ringkasan risiko menyeluruh secara singkat")
     llm_recomendation: str = Field(..., description="Rekomendasi perbaikan")
     risk_grading: str = Field(..., description="Grading risiko menyeluruh")
@@ -62,3 +65,11 @@ def create_llm_prompt(issues: List[Issue]) -> str:
         "'confidence_score': 'A float number between 0.0 and 1.0 that represents your confidence.'\n"
     )
     return prompt_header + issue_details + prompt_footer
+
+# 4. endpoint
+
+@app.post("/generate-report", response_model=LLMReportResponse, summary="Laporan Analisis")
+async def generate_report(analysis_input: AnalysisInput):
+    """
+    Terima input, kirim ke LLM, hasil: laporan analisis
+    """

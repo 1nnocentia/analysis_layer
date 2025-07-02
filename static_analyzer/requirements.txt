@@ -9,3 +9,12 @@ solc-select use 0.8.20
 
 # Instal slither-analyzer
 pip3 install slither-analyzer
+
+# dependencies python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# sisa kodenya
+COPY analysis_service_01_slither.py .
+
+# port yang digunakan
+EXPOSE 8000

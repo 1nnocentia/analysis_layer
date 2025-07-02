@@ -1,0 +1,27 @@
+version: '3.8'
+
+# mendefisikan service yang di jalankan
+services:
+  # static-analyzer
+  static-analyzer:
+    build:
+      context: ./static_analyzer
+      dockerfile: Dockerfile
+    container_name: static_analyzer_service
+    # port dalam container
+    ports:
+      - "8000:8000"
+    # otomatis restart
+    restart: unless-stopped
+
+  # llm-analyzer
+  llm-analyzer:
+    build:
+      context: ./llm_analyzer
+      dockerfile: Dockerfile
+    container_name: llm_analyzer_service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    restart: unless-stopped

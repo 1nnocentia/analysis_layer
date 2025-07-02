@@ -1,0 +1,11 @@
+# Instal solc-select
+pip3 install solc-select
+
+# Instal versi solidity yang Anda butuhkan (contoh: 0.8.20)
+solc-select install 0.8.20
+
+# Atur versi tersebut sebagai default
+solc-select use 0.8.20
+
+# Instal slither-analyzer
+pip3 install slither-analyzer

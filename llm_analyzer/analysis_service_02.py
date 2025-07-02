@@ -41,4 +41,6 @@ def create_llm_prompt(issues: List[Issue]) -> str:
     Prompting untuk mendapatkan analisa dari LLM
     """
     if not issues:
-        return "Tidak ada risiko yang ditemukan. Konfirmasi jika smartcontract aman,"
+        return "Tidak ada risiko yang ditemukan. Konfirmasi jika smartcontract aman."
+
+    prompt_header

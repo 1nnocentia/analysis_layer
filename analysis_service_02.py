@@ -26,7 +26,7 @@ class AnalysisInput(BaseModel):
     risk_grading: str = Field(..., description="Grading risiko menyeluruh")
     confidence_score: float = Field(..., description="Confidence score analisa")
 
-#2. Initialize FastAPI
+# 2. Initialize FastAPI
 
 app = FastAPI(
     title="LLM Analysis Service",
@@ -34,3 +34,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# 3. helper
+
+def create_llm_prompt(issues: List[Issue]) -> str:
+    """
+    Prompting untuk mendapatkan analisa dari LLM
+    """
+    if not issues:
+        return "Tidak ada risiko yang ditemukan. Konfirmasi jika smartcontract aman,"

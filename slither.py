@@ -85,3 +85,44 @@ def format_slither_output(slither_row_json: dict) -> List[Issue]:
                 )
                 formated_issues.append(issue)
     return formated_issues
+
+# 4. Buat Endpoint
+@app.post("/analyze", response_model=AnalysisResponse, summary="Analisis Kode SmartContract")
+async def analyze_contract(contract: ContractInput):
+    """
+    Endpoint untuk dapat input (source_code), analisa Slither, lalu outputnya daftar issue
+    """
+    # simpan file code sementara
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sol", delete=False) as tmp_file:
+        tmp_file.write(contract.source_code)
+        tmp_file_path = tmp_file.name
+
+    try:
+        # jalankan Slither dengan subprocess
+        # --json, kembalikan output dalam format JSON
+        command = ["slither", tmp_file_path, "--json", "-"]
+
+        # eksekusi command
+        # cek apakah Slither berhasil, kalau tidak, lempar error
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+
+        # output JSON dari Slither
+        slither_output = json.loads(result.stdout)
+
+        # ubah sesuai kebutuhan
+        formatted_issues = format_slither_output(slither_output)
+
+        return AnalysisResponse(issues=formatted_issues)
+    
+    except subprocess.CalledProcessError as e:
+        # jika Slither gagal dan harus lempar error
+        raise HTTPException(status_code=400, detail=f"Slither analysis failed. The contract might have compilation errors. Error: {e.stderr}")
+    
+    except json.JSONDecodeError:
+        # kalau output Slither tidak valid JSON
+        raise HTTPException(status_code=500, detail="Failed to parse Slither's output. Please check the Slither installation and the contract code.")
+    
+    finally:
+        # hapus tmp file
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)

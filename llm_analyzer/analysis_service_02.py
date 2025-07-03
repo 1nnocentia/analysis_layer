@@ -46,15 +46,15 @@ def create_llm_prompt(issues: List[Issue]) -> str:
     if not issues:
         return "Tidak ada risiko yang ditemukan. Konfirmasi jika smartcontract aman."
 
-    prompt_header = "You're a expert smartcontrct auditor. You'll be get the analysis report from either Slither or Mythril. Analyze the following issues with holistic approach, from this following findings:\n\n"
+    prompt_header = "You're an expert smartcontract auditor. You'll be get the analysis report from either Slither or Mythril. Analyze the following issues with holistic approach, from this following findings:\n\n"
 
     issue_details = ""
     for issue in issues:
         issue_details += (
-            f"Tipe Kerentanan: {issue.type}\n"
-            f"Tingkat Keparahan: {issue.severity}\n"
-            f"Lokasi: {issue.line}\n"
-            f"Pesan: {issue.message}\n\n"
+            f"Vulnerability Type: {issue.type}\n"
+            f"Severity Level: {issue.severity}\n"
+            f"Line: {issue.line}\n"
+            f"Message: {issue.message}\n\n"
         )
 
     prompt_footer = (
@@ -95,7 +95,7 @@ async def generate_report(analysis_input: AnalysisInput):
 
         response_json = response.json()
 
-        report_text = respnse_json['candidates'][0]['content']['parts'][0]['text']
+        report_text = response_json['candidates'][0]['content']['parts'][0]['text']
         
         report_data = json.loads(report_text)
 

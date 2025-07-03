@@ -1,19 +1,21 @@
-# Base image
-FROM python:3.10-slim
+# Gunakan base image Python 3.9
+FROM python:3.9-slim
 
-# working directory
+# Tentukan direktori kerja
 WORKDIR /app
 
-# caching layer docker
-COPY requirements_llm.txt .
+# Definisikan trusted hosts untuk konsistensi
+ARG PIP_TRUSTED_HOSTS="--trusted-host pypi.org --trusted-host files.pythonhosted.org"
 
-# dependencies Python
-RUN pip install --no-cache-dir -r requirements_llm.txt
+# Salin dan instal requirements
+COPY requirements.txt .
+RUN pip install -r requirements.txt ${PIP_TRUSTED_HOSTS}
 
-# sisa kode
+# Salin kode aplikasi
 COPY analysis_service_02.py .
 
-# port yang digunakan
+# Expose port
 EXPOSE 8001
 
-CMD ["uvicorn", "main_llm:app", "--host", "0.0.0.0", "--port", "8001"]
+# PERBAIKAN DI SINI: Gunakan "analysis_service_02:app" bukan "main_llm:app"
+CMD ["uvicorn", "analysis_service_02:app", "--host", "0.0.0.0", "--port", "8001"]

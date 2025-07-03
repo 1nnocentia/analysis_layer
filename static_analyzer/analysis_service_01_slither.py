@@ -5,9 +5,18 @@ import subprocess # untuk menjalankan slither dari python
 import json # konversi antara py dan json
 import tempfile # temporary file
 import os # berinteraksi dengan path/env/file system
+import logging
 from fastapi import FastAPI, HTTPException # untuk buat endpoint
 from pydantic import BaseModel # class model untuk validasi data (JSON request)
 from typing import List # variable type untuk list
+
+# buat logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # 1. Model data (requst dan response)
 # validasi struktur input dan output API
@@ -47,7 +56,7 @@ class AnalysisResponse(BaseModel):
 app = FastAPI(
     title="Slither Analysis Service",
     description="API untuk analisis statis smart contract dengan slither",
-    version="1.0.0"
+    version="2.1.0"
 )
 
 # 3. Helper untuk transformasi output
@@ -59,23 +68,23 @@ def format_slither_output(slither_row_json: dict) -> List[Issue]:
     formated_issues = []
 
     # validasi apakah analisis berhasil
-    if not slither_row_json.get("success") or not slither_row_json.get("result", {}).get("detectors"):
+    if not slither_row_json.get("results", {}).get('detectors'):
         return []
     
-    detectors = slither_row_json["result"]["detectors"]
+    detectors = slither_row_json["results"]["detectors"]
 
     for detector in detectors:
         # informasi dasar
         issue_type = detector.get("check", "N/A")
         severity = detector.get("impact", "N/A")
         # ambil infromasi dari Slither
-        message = detector.get("message", "No message available").split("\n")[0]
+        message = detector.get("description", "No description available").split("\n")[0]
 
         # detektor bisa punya beberapa lokasi
         if "elements" in detector:
             for element in detector["elements"]:
                 # ambil nomor baris dari elemen
-                line_number = element.get("source_mapping", {}).get("start", {}).get("line", [0])[0]
+                line_number = element.get("source_mapping", {}).get("line", [0])[0]
                 
                 issue = Issue(
                     type=issue_type,
@@ -100,30 +109,35 @@ async def analyze_contract(contract: ContractInput):
     try:
         # jalankan Slither dengan subprocess
         # --json, kembalikan output dalam format JSON
-        command = ["slither", tmp_file_path, "--json", "-"]
+        slither_executable_path = "/usr/local/bin/slither"
+        command = [slither_executable_path, tmp_file_path, "--json", "-"]
 
         # eksekusi command
         # cek apakah Slither berhasil, kalau tidak, lempar error
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command, capture_output=True, text=True) #, check=True
+        logger.info(f"Command finished with return code: {result.returncode}")
 
-        # output JSON dari Slither
-        slither_output = json.loads(result.stdout)
+        try:
+            slither_output = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            logger.error("Crashed, Slither not produced valid JSON output.")
+            logger.debug(f"Slither STDERR: {result.stderr}")
+            raise HTTPException(status_code=500, detail="Failed to parse Slither's output. Please check the Slither installation and the contract code.")
 
-        # ubah sesuai kebutuhan
-        formatted_issues = format_slither_output(slither_output)
-
-        return AnalysisResponse(issues=formatted_issues)
-    
-    except subprocess.CalledProcessError as e:
-        # jika Slither gagal dan harus lempar error
-        raise HTTPException(status_code=400, detail=f"Slither analysis failed. The contract might have compilation errors. Error: {e.stderr}")
-    
-    except json.JSONDecodeError:
-        # kalau output Slither tidak valid JSON
-        raise HTTPException(status_code=500, detail="Failed to parse Slither's output. Please check the Slither installation and the contract code.")
+        if slither_output.get("success"):
+            logger.info("Slither analysis completed successfully.")
+            formatted_issues = format_slither_output(slither_output)
+            return AnalysisResponse(issues=formatted_issues)
+        else:
+            error_message = slither_output.get("error", "Unknown error")
+            logger.warning(f"Slither analysis failed with error: {error_message}")
+            raise HTTPException(status_code=400, detail=f"Slither analysis failed: {error_message}")
+        
+    except Exception as e:
+        logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during Slither analysis. {type(e).__name__} - {e}")
     
     finally:
-        # hapus tmp file
         if os.path.exists(tmp_file_path):
             os.remove(tmp_file_path)
 

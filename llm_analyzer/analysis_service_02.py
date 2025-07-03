@@ -56,23 +56,23 @@ def create_llm_prompt(issues: List[Issue]) -> str:
     if not issues:
         return "Tidak ada risiko yang ditemukan. Konfirmasi jika smartcontract aman."
 
-    prompt_header = "You're an expert smartcontract auditor. You'll be get the analysis report from either Slither or Mythril. Analyze the following issues with holistic approach, from this following findings:\n\n"
+    prompt_header = "Kamu adalah seorang auditor smart contract yang ahli. Kamu akan menerima laporan analisis dari Slither atau Mythril. Analisislah temuan-temuan berikut ini dengan pendekatan yang holistik, berdasarkan hasil temuan berikut:\n\n"
 
     issue_details = ""
     for issue in issues:
         issue_details += (
-            f"Vulnerability Type: {issue.type}\n"
-            f"Severity Level: {issue.severity}\n"
-            f"Line: {issue.line}\n"
-            f"Message: {issue.message}\n\n"
+            f"Jenis Kerentanan: {issue.type}\n"
+            f"Tingkat Keparahan: {issue.severity}\n"
+            f"Baris/Lokasi: {issue.line}\n"
+            f"Pesan: {issue.message}\n\n"
         )
 
     prompt_footer = (
-        "\n Based on all the above findings, please provide your analysis. YOUR RESPONSE MUST BE A VALID JSON OBJECT, and ONLY A VALID JSON object, with the following structure:\n" 
-        "'risk_summary': 'Holistic risk summary in 1-2 sentences.',\n"
-        "'llm_recommendation': 'The most important and actionable improvement recommendations.',\n"
-        "'risk_grading': 'One word risk assessment: Critical, High, Medium, or Low.',\n"
-        "'confidence_score': 'A float number between 0.0 and 1.0 that represents your confidence.'\n"
+        "\n Berdasarkan semua temuan di atas, silakan berikan analisismu. JAWABANMU HARUS BERUPA OBJEK JSON YANG VALID, dan HANYA berupa objek JSON yang valid, dengan struktur sebagai berikut:\n" 
+        "'risk_summary': 'Ringkasan risiko secara holistik dalam 1-2 kalimat.',\n"
+        "'llm_recommendation': 'Rekomendasi perbaikan yang paling penting dan dapat segera dilakukan.',\n"
+        "'risk_grading': 'Penilaian risiko dalam satu kata: Kritis, Tinggi, Sedang, atau Rendah.',\n"
+        "'confidence_score': 'Angka desimal antara 0.0 hingga 1.0 yang merepresentasikan tingkat keyakinan (confidence)'\n"
     )
     return prompt_header + issue_details + prompt_footer
 

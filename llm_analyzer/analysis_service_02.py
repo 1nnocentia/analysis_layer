@@ -12,6 +12,16 @@ from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel, Field
 from typing import List
 import requests 
+import logging
+
+
+# buat logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # 1. Input data sesuai output dari layer 1
 class Issue(BaseModel):
@@ -25,16 +35,16 @@ class AnalysisInput(BaseModel):
 
 class LLMReportResponse(BaseModel):
     risk_summary: str = Field(..., description="Ringkasan risiko menyeluruh secara singkat")
-    llm_recomendation: str = Field(..., description="Rekomendasi perbaikan")
+    llm_recommendation: str = Field(..., description="Rekomendasi perbaikan")
     risk_grading: str = Field(..., description="Grading risiko menyeluruh")
-    confidence_score: float = Field(..., description="Confidence score analisa")
+    confidence_score: float = Field(..., ge=0, le=1,description="Confidence score analisa")
 
 # 2. Initialize FastAPI
 
 app = FastAPI(
     title="LLM Analysis Service",
     description="Layer Analisis kedua untuk laporan analisa",
-    version="1.0.0",
+    version="1.2.0",
 )
 
 # 3. helper
@@ -75,6 +85,7 @@ async def generate_report(analysis_input: AnalysisInput):
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
+        logger.error("GEMINI_API_KEY not set in environment variables")
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment variables")
     
     api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
@@ -90,7 +101,8 @@ async def generate_report(analysis_input: AnalysisInput):
     }
 
     try:
-        response = requests.post(api_url, json=payload)
+        logger.info("Sending request to LLM API")
+        response = requests.post(api_url, json=payload, timeout=60)
         response.raise_for_status() 
 
         response_json = response.json()
@@ -98,13 +110,19 @@ async def generate_report(analysis_input: AnalysisInput):
         report_text = response_json['candidates'][0]['content']['parts'][0]['text']
         
         report_data = json.loads(report_text)
+        logger.info("LLM response received and parsed successfully")
 
         return LLMReportResponse(**report_data)
     
     except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to call LLM API: {str(e)}")
         raise HTTPException(status_code=503, detail=f"Failed to call LLM API: {str(e)}")
     except (KeyError, IndexError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to parse LLM response: {str(e)}. Response: {response.text}")
         raise HTTPException(status_code=500, detail=f"Failed to parse LLM response: {str(e)}. Response: {response.text}")
+    except Exception as e:
+        logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during LLM analysis. {type(e).__name__} - {e}")
     
 # 5. run run
 
